@@ -1,0 +1,39 @@
+# Binaries and build outputs
+/bloomsom
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+
+# Test & coverage artifacts
+*.out
+*.test
+coverage.*
+__debug_bin*
+
+# SQLite Database & journals
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+bloomsom.db*
+
+# Local runtime logs
+*.log
+logs/
+
+# Local environment / overrides
+.env
+bloomsom.local.yaml
+
+# IDE / Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
