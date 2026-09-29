@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bloomsom Engine Client</title>
+  <style>
+    body { font-family: monospace; background: #1a1a1a; color: #f0f0f0; margin: 20px; }
+    h1 { color: #4CAF50; font-size: 20px; }
+    .card { background: #2a2a2a; padding: 15px; border-radius: 6px; margin-bottom: 15px; max-width: 600px; }
+    input, button { background: #333; color: #fff; border: 1px solid #555; padding: 8px; border-radius: 4px; font-family: monospace; }
+    button { cursor: pointer; background: #2e7d32; border: none; font-weight: bold; }
+    button:hover { background: #388e3c; }
+    #log { background: #000; padding: 10px; border-radius: 4px; height: 200px; overflow-y: scroll; font-size: 13px; }
+    .msg { margin-bottom: 4px; }
+    .system { color: #888; }
+    .chat { color: #64b5f6; }
+    .error { color: #e57373; }
+  </style>
+</head>
+<body>
+  <h1>Bloomsom Engine - Test Client</h1>
+
+  <div class="card">
+    <h3>1. Connect</h3>
+    <input id="serverAddr" value="ws://127.0.0.1:7777/ws" style="width: 250px;">
+    <button onclick="connect()">Connect</button>
+    <span id="connStatus" style="color: #ff9800; margin-left: 10px;">Disconnected</span>
+  </div>
+
+  <div class="card">
+    <h3>2. Authentication</h3>
+    <input id="username" placeholder="Username" value="player1">
+    <input id="password" type="password" placeholder="Password" value="password123">
+    <button onclick="sendRegister()">Register</button>
+    <button onclick="sendLogin()">Login</button>
+  </div>
+
+  <div class="card">
+    <h3>3. Room & Chat</h3>
+    <input id="roomId" placeholder="Room ID" value="default">
+    <button onclick="joinRoom()">Join Room</button>
+    <button onclick="leaveRoom()">Leave Room</button>
+    <br><br>
+    <input id="chatMsg" placeholder="Type a message..." style="width: 300px;">
+    <button onclick="sendChat()">Send Message</button>
+  </div>
+
+  <div class="card">
+    <h3>Live Packets & Chat</h3>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    let ws = null;
+    let token = "";
+
+    function log(text, cls = "") {
+      const el = document.getElementById("log");
+      const div = document.createElement("div");
+      div.className = "msg " + cls;
+      div.innerText = "[" + new Date().toLocaleTimeString() + "] " + text;
+      el.appendChild(div);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function connect() {
+      const addr = document.getElementById("serverAddr").value;
+      ws = new WebSocket(addr);
+
+      ws.onopen = () => {
+        document.getElementById("connStatus").innerText = "Connected";
+        document.getElementById("connStatus").style.color = "#4CAF50";
+        log("Connected to " + addr, "system");
+      };
+
+      ws.onclose = () => {
+        document.getElementById("connStatus").innerText = "Disconnected";
+        document.getElementById("connStatus").style.color = "#ff9800";
+        log("Connection closed", "system");
+      };
+
+      ws.onerror = (err) => {
+        log("WebSocket error", "error");
+      };
+
+      ws.onmessage = (event) => {
+        const pkt = JSON.parse(event.data);
+        if (pkt.type === "chat") {
+          log(`${pkt.payload.username || 'System'}: ${pkt.payload.message}`, "chat");
+        } else if (pkt.type === "login") {
+          token = pkt.payload.token;
+          log("Logged in! Token: " + token.substring(0, 10) + "...", "system");
+        } else if (pkt.type === "error") {
+          log("Error: " + pkt.payload.error, "error");
+        } else {
+          log("Received [" + pkt.type + "]: " + JSON.stringify(pkt.payload), "system");
+        }
+      };
+    }
+
+    function sendPacket(type, payload) {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        log("Not connected to server", "error");
+        return;
+      }
+      ws.send(JSON.stringify({ type: type, payload: payload }));
+    }
+
+    function sendRegister() {
+      sendPacket("register", {
+        username: document.getElementById("username").value,
+        password: document.getElementById("password").value
+      });
+    }
+
+    function sendLogin() {
+      sendPacket("login", {
+        username: document.getElementById("username").value,
+        password: document.getElementById("password").value
+      });
+    }
+
+    function joinRoom() {
+      sendPacket("join", { room_id: document.getElementById("roomId").value });
+    }
+
+    function leaveRoom() {
+      sendPacket("leave", {});
+    }
+
+    function sendChat() {
+      const input = document.getElementById("chatMsg");
+      sendPacket("chat", { message: input.value });
+      input.value = "";
+    }
+  </script>
+</body>
+</html>
