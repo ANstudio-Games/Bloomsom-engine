@@ -1,6 +1,6 @@
 package main
 
-import "bloomsom/cmd"
+import "github.com/adnannpm/Bloomsom/cmd"
 
 func main() {
 	cmd.Execute()
