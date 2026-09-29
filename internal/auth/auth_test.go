@@ -81,12 +81,12 @@ func TestArgon2(t *testing.T) {
 	malformed := []string{
 		"",
 		"not-a-hash",
-		"$argon2i$v=19$m=65536,t=1,p=4$c2FsdA$aGFzaA",        // wrong algo
-		"$argon2id$v=99$m=65536,t=1,p=4$c2FsdA$aGFzaA",       // wrong version
-		"$argon2id$v=19$m=0,t=1,p=4$c2FsdA$aGFzaA",           // invalid memory
-		"$argon2id$v=19$invalid_params$c2FsdA$aGFzaA",        // bad params
-		"$argon2id$v=19$m=65536,t=1,p=4$invalid_b64$aGFzaA",  // bad salt b64
-		"$argon2id$v=19$m=65536,t=1,p=4$c2FsdA$invalid_b64",  // bad hash b64
+		"$argon2i$v=19$m=65536,t=1,p=4$c2FsdA$aGFzaA",       // wrong algo
+		"$argon2id$v=99$m=65536,t=1,p=4$c2FsdA$aGFzaA",      // wrong version
+		"$argon2id$v=19$m=0,t=1,p=4$c2FsdA$aGFzaA",          // invalid memory
+		"$argon2id$v=19$invalid_params$c2FsdA$aGFzaA",       // bad params
+		"$argon2id$v=19$m=65536,t=1,p=4$invalid_b64$aGFzaA", // bad salt b64
+		"$argon2id$v=19$m=65536,t=1,p=4$c2FsdA$invalid_b64", // bad hash b64
 	}
 
 	for _, m := range malformed {
@@ -170,7 +170,7 @@ func TestRegister(t *testing.T) {
 
 	// 2. Username with invalid chars
 	invalidUsernames := []string{
-		"al",                                // too short (< 3)
+		"al", // too short (< 3)
 		"this_username_is_way_too_long_for_registration_33", // > 32
 		"alice with space",
 		"alice@domain",
