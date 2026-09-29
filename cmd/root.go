@@ -1,31 +1,36 @@
+// Package cmd implements the bloomsom command-line interface.
 package cmd
 
 import (
+	"context"
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"github.com/adnannpm/Bloomsom/internal/config"
 )
+
+// cfgFile is the config path shared by every subcommand (--config).
+var cfgFile string
 
 var rootCmd = &cobra.Command{
 	Use:   "bloomsom",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Short: "Local-first multiplayer game server engine",
+	Long: `Bloomsom is a local-first multiplayer game server engine.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Typical flow:
+  bloomsom init    set up bloomsom.yaml and the SQLite database
+  bloomsom start   run the server in the foreground until Ctrl+C`,
+	SilenceUsage: true,
 }
 
+// Execute runs the root command. It is called by main.main().
 func Execute() {
-	err := rootCmd.Execute()
-	if err != nil {
+	if err := rootCmd.ExecuteContext(context.Background()); err != nil {
 		os.Exit(1)
 	}
 }
 
 func init() {
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", config.DefaultFile, "path to the config file")
 }
-
-
