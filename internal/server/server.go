@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/adnannpm/Bloomsom/internal/auth"
 	"github.com/adnannpm/Bloomsom/internal/config"
 	"github.com/adnannpm/Bloomsom/internal/storage"
 	"github.com/adnannpm/Bloomsom/internal/version"
@@ -96,6 +97,8 @@ func Run(ctx context.Context, opts Options) error {
 	}
 	log.Info("database ready", "path", db.Path(), "migrations", len(migrations))
 
+	authSvc := auth.NewService(db, cfg.Auth, log)
+
 	for _, proto := range cfg.Server.Transports {
 		port := cfg.Server.WSPort
 		if proto == "udp" {
@@ -114,6 +117,9 @@ func Run(ctx context.Context, opts Options) error {
 		case <-ctx.Done():
 			running = false
 		case <-ticker.C:
+			if purged, err := authSvc.PurgeExpired(ctx); err == nil && purged > 0 {
+				log.Debug("purged expired sessions", "count", purged)
+			}
 			log.Info("metrics", "uptime", uptime(started), "rooms", 0, "players", 0)
 		}
 	}
