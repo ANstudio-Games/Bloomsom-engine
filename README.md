@@ -89,6 +89,32 @@ Running `./bloomsom start` without prior initialization automatically launches t
 
 ---
 
+## Automated Releases
+
+The `Release Binaries` GitHub Actions workflow publishes a release when `VERSION`
+changes in a push or merge to `main`. Use a stable `MAJOR.MINOR.PATCH` version
+without a `v` prefix, for example `0.1.1`.
+
+1. Update `VERSION` together with the changes you want to release.
+2. Commit and push, or merge the pull request, to `main`.
+3. The workflow runs `go vet` and race-enabled tests, then builds binaries for
+   Linux, macOS, and Windows (amd64 and arm64).
+4. Once all builds succeed, it creates tag `v<version>` on the exact commit and
+   publishes a GitHub Release with generated notes, archives, and `checksums.txt`.
+
+Existing tags are skipped, so ordinary pushes do not create duplicate releases.
+The initial `VERSION` is `0.1.0`; adding it to `main` triggers the first release.
+You can retry a failed run using **Actions → Release Binaries → Run workflow**
+on `main`, provided the version tag does not already exist. To recover from an
+incomplete published release, repair its assets manually or bump `VERSION`.
+Release binaries report the release version through `bloomsom version`; ordinary
+local builds keep the development version. The container publishing workflow is
+independent and remains unchanged.
+
+The workflow uses GitHub's built-in `GITHUB_TOKEN` with `contents: write`; no
+personal access token is needed. Repository or organization policies must allow
+that permission. Tags created with this token do not trigger other push workflows.
+
 ## CLI Reference
 
 ```text

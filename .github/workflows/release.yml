@@ -1,0 +1,98 @@
+name: Release Binaries
+
+on:
+  push:
+    branches: [main]
+    paths: [VERSION]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Serialize releases; never cancel a release that is already publishing.
+concurrency:
+  group: release-binaries
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate version and check tag
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(<VERSION)
+          if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo 'VERSION must contain a stable version such as 0.1.0 (without v).' >&2
+            exit 1
+          fi
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+          if git show-ref --verify --quiet "refs/tags/v$version"; then
+            echo "Tag v$version already exists; skipping release."
+            echo 'publish=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'publish=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Go
+        if: steps.version.outputs.publish == 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Vet and test
+        if: steps.version.outputs.publish == 'true'
+        run: |
+          go vet ./...
+          go test -race -shuffle=on ./...
+
+      - name: Build and archive binaries
+        if: steps.version.outputs.publish == 'true'
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
+            os=${target%/*}
+            arch=${target#*/}
+            name="bloomsom_${VERSION}_${os}_${arch}"
+            staging=$(mktemp -d)
+            binary=bloomsom
+            if [[ "$os" == windows ]]; then binary=bloomsom.exe; fi
+            CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go build -trimpath \
+              -ldflags="-s -w -X github.com/adnannpm/Bloomsom/internal/version.Engine=$VERSION" \
+              -o "$staging/$binary" .
+            cp LICENSE README.md "$staging/"
+            if [[ "$os" == windows ]]; then
+              (cd "$staging" && zip "$GITHUB_WORKSPACE/dist/$name.zip" "$binary" LICENSE README.md)
+            else
+              tar -C "$staging" -czf "dist/$name.tar.gz" "$binary" LICENSE README.md
+            fi
+            rm -rf "$staging"
+          done
+          (cd dist && sha256sum *.tar.gz *.zip > checksums.txt)
+
+      - name: Publish GitHub Release
+        if: steps.version.outputs.publish == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          gh release create "v$VERSION" dist/* \
+            --target "$GITHUB_SHA" \
+            --title "Bloomsom v$VERSION" \
+            --generate-notes
